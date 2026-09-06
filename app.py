@@ -1085,188 +1085,214 @@ with t_pred:
 
             # ── Main prediction card ──
             st.markdown(f"""
-            <div class="pred-card">
-              <div class="pred-header">
-                <div>
-                  <div class="pred-event-name">{sel_event_name}</div>
-                  <div style="color:#444;font-size:0.72rem;margin-top:2px">{fmt_ist(sel_ev.get('Date'))}</div>
-                </div>
-                <div class="pred-countdown">{cd_str}</div>
-              </div>
 
-              <div style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap">
-                <div><div style="color:#333;font-size:0.6rem;margin-bottom:2px">FORECAST</div>
-                  <div style="font-family:'JetBrains Mono',monospace;color:#C9A227;font-size:1.1rem;font-weight:700">{fp(fc_val) if fc_val else '—'}</div></div>
-                <div><div style="color:#333;font-size:0.6rem;margin-bottom:2px">PREVIOUS</div>
-                  <div style="font-family:'JetBrains Mono',monospace;color:#888;font-size:1.1rem">{fp(pv_val) if pv_val else '—'}</div></div>
-                <div><div style="color:#333;font-size:0.6rem;margin-bottom:2px">AVG SURPRISE (24M)</div>
-                  <div style="font-family:'JetBrains Mono',monospace;color:{'#00c076' if pred['avg_surprise']<0 else '#ff4d4d' if pred['avg_surprise']>0 else '#555'};font-size:1.1rem;font-weight:700">{pred['avg_surprise']:+.2f}</div></div>
-                <div><div style="color:#333;font-size:0.6rem;margin-bottom:2px">RECENT TREND</div>
-                  <div style="color:{'#00c076' if pred['recent_trend']=='cooling' else '#ff4d4d' if pred['recent_trend']=='hot' else '#C9A227'};font-size:0.85rem;font-weight:700;text-transform:uppercase">{pred['recent_trend']}</div></div>
-              </div>
+    if pred:
+        hrs_left = hours_until(sel_ev.get("Date"))
+        cd_str   = countdown(sel_ev.get("Date"))
 
-              <div style="border-top:1px solid #1e1e3a;padding-top:14px;margin-bottom:14px">
-                <div style="color:#5a5a8a;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;margin-bottom:10px">PROBABILITY DISTRIBUTION — Based on last {pred['history_total']} releases</div>
+        # ── Header card ──
+        trend_col = "#00c076" if pred['recent_trend']=='cooling' else ("#ff4d4d" if pred['recent_trend']=='hot' else "#C9A227")
+        avg_col   = "#00c076" if pred['avg_surprise']<0 else ("#ff4d4d" if pred['avg_surprise']>0 else "#555")
 
-                <div class="prob-bar-wrap">
-                  <div class="prob-label">
-                    <span style="color:#00c076;font-size:0.78rem;font-weight:700">🟢 BELOW FORECAST (Gold Bullish)</span>
-                    <span style="color:#00c076;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800">{pred['prob_below']}%</span>
-                  </div>
-                  <div style="color:#333;font-size:0.65rem;margin-bottom:4px">{pred['cool_range']} &nbsp;·&nbsp; Historical: {pred['history_below']}/{pred['history_total']} times</div>
-                  <div class="prob-bar-bg"><div class="prob-bar-fill prob-cool" style="width:{pred['prob_below']}%"></div></div>
-                </div>
-
-                <div class="prob-bar-wrap">
-                  <div class="prob-label">
-                    <span style="color:#C9A227;font-size:0.78rem;font-weight:700">🟡 IN-LINE (Neutral)</span>
-                    <span style="color:#C9A227;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800">{pred['prob_inline']}%</span>
-                  </div>
-                  <div style="color:#333;font-size:0.65rem;margin-bottom:4px">{pred['inln_range']}</div>
-                  <div class="prob-bar-bg"><div class="prob-bar-fill prob-inln" style="width:{pred['prob_inline']}%"></div></div>
-                </div>
-
-                <div class="prob-bar-wrap">
-                  <div class="prob-label">
-                    <span style="color:#ff4d4d;font-size:0.78rem;font-weight:700">🔴 ABOVE FORECAST (Gold Bearish)</span>
-                    <span style="color:#ff4d4d;font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800">{pred['prob_above']}%</span>
-                  </div>
-                  <div style="color:#333;font-size:0.65rem;margin-bottom:4px">{pred['hot_range']} &nbsp;·&nbsp; Historical: {pred['history_above']}/{pred['history_total']} times</div>
-                  <div class="prob-bar-bg"><div class="prob-bar-fill prob-hot" style="width:{pred['prob_above']}%"></div></div>
-                </div>
-              </div>
-
-              <div style="background:#0a0a1a;border:1px solid #1e1e3a;border-radius:8px;padding:10px 14px;margin-bottom:10px">
-                <span style="color:#5a5a8a;font-size:0.65rem;font-weight:700;letter-spacing:0.1em">ANALYST NOTE</span>
-                <div style="color:#888;font-size:0.78rem;margin-top:4px">{pred['notes']}</div>
-              </div>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-            # ── 3 Scenario Analysis ──
-            st.markdown("### Agar Actual Data Aaya Toh... (3 Scenarios)")
-
-            a_cool = scenario_assets("below", sel_event_name)
-            a_inln = scenario_assets("inline", sel_event_name)
-            a_hot  = scenario_assets("above",  sel_event_name)
-
-            def asset_rows(assets):
-                rows=""
-                for name,val in assets.items():
-                    col="#00c076" if "↑" in val or "BULL" in val or "FALL" in val else ("#ff4d4d" if "↓" in val or "BEAR" in val or "RISING" in val else "#555")
-                    rows+=f'<div class="sc-asset"><span class="sc-asset-name">{name}</span><span style="color:{col};font-weight:700;font-family:\'JetBrains Mono\',monospace;font-size:0.7rem">{val}</span></div>'
-                return rows
-
-            ml=pred["most_likely"]
-            cool_extra=' <span style="background:#00c07620;color:#00c076;font-size:0.55rem;padding:1px 5px;border-radius:2px;font-weight:700">MOST LIKELY</span>' if ml=="below" else ""
-            inln_extra=' <span style="background:#C9A22720;color:#C9A227;font-size:0.55rem;padding:1px 5px;border-radius:2px;font-weight:700">MOST LIKELY</span>' if ml=="inline" else ""
-            hot_extra=' <span style="background:#ff4d4d20;color:#ff4d4d;font-size:0.55rem;padding:1px 5px;border-radius:2px;font-weight:700">MOST LIKELY</span>' if ml=="above" else ""
-
-            # Gold reaction + score impact
-            def score_impact_html(delta):
-                new_s=max(-100,min(100,macro_score+delta))
-                col="#00c076" if delta>0 else ("#ff4d4d" if delta<0 else "#555")
-                return f'<div style="margin-top:6px;padding-top:6px;border-top:1px solid #111"><span style="color:#333;font-size:0.6rem">Score impact: </span><span style="color:{col};font-family:\'JetBrains Mono\',monospace;font-size:0.75rem;font-weight:700">{delta:+.1f} → {new_s:.0f}</span></div>'
-
-            st.markdown(f"""
-            <div class="scenario-grid">
-
-              <div class="scenario-box sc-cool">
-                <div class="sc-label">🟢 BELOW FORECAST{cool_extra}</div>
-                <div class="sc-range">{pred['cool_range']}</div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                  <span style="color:#00c076;font-size:0.82rem;font-weight:800">Gold: {pred['gold_below']:+.2f}%</span>
-                  <span style="color:#333;font-size:0.72rem">{pred['prob_below']}% chance</span>
-                </div>
-                {asset_rows(a_cool)}
-                {score_impact_html(pred['score_below'])}
-              </div>
-
-              <div class="scenario-box sc-inln">
-                <div class="sc-label">🟡 IN-LINE{inln_extra}</div>
-                <div class="sc-range">{pred['inln_range']}</div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                  <span style="color:#C9A227;font-size:0.82rem;font-weight:800">Gold: {pred['gold_inline']:+.2f}%</span>
-                  <span style="color:#333;font-size:0.72rem">{pred['prob_inline']}% chance</span>
-                </div>
-                {asset_rows(a_inln)}
-                {score_impact_html(pred['score_inline'])}
-              </div>
-
-              <div class="scenario-box sc-hot">
-                <div class="sc-label">🔴 ABOVE FORECAST{hot_extra}</div>
-                <div class="sc-range">{pred['hot_range']}</div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                  <span style="color:#ff4d4d;font-size:0.82rem;font-weight:800">Gold: {pred['gold_above']:+.2f}%</span>
-                  <span style="color:#333;font-size:0.72rem">{pred['prob_above']}% chance</span>
-                </div>
-                {asset_rows(a_hot)}
-                {score_impact_html(pred['score_above'])}
-              </div>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-            # ── Historical Stats ──
-            st.markdown("### Historical Statistics — Last 24 Months")
-            gr = GOLD_REACTIONS.get(sel_event_name, {})
-            hs1,hs2,hs3,hs4 = st.columns(4)
-            with hs1:
-                st.markdown(f"""<div class="hist-stat-box">
-                  <div class="hist-stat-num" style="color:#00c076">{pred['history_below']}/{pred['history_total']}</div>
-                  <div class="hist-stat-lbl">Below forecast</div></div>""", unsafe_allow_html=True)
-            with hs2:
-                st.markdown(f"""<div class="hist-stat-box">
-                  <div class="hist-stat-num" style="color:#C9A227">{pred['history_above']}/{pred['history_total']}</div>
-                  <div class="hist-stat-lbl">Above forecast</div></div>""", unsafe_allow_html=True)
-            with hs3:
-                st.markdown(f"""<div class="hist-stat-box">
-                  <div class="hist-stat-num" style="color:#00c076">{gr.get('below',0):+.2f}%</div>
-                  <div class="hist-stat-lbl">Gold avg (cool)</div></div>""", unsafe_allow_html=True)
-            with hs4:
-                st.markdown(f"""<div class="hist-stat-box">
-                  <div class="hist-stat-num" style="color:#ff4d4d">{gr.get('above',0):+.2f}%</div>
-                  <div class="hist-stat-lbl">Gold avg (hot)</div></div>""", unsafe_allow_html=True)
-
-            st.markdown(f"""
-            <div class="warn-box" style="margin-top:12px">
-            ⚠️ <b>Important:</b> Probability estimate historical patterns par based hai — guarantee nahi.
-            Market reaction positioning, revisions, aur cross-asset confirmation par bhi depend karta hai.
-            Always DXY + US2Y reaction dekho release ke baad before entering any trade.
-            <br><br>
-            📊 <b>Current macro score {macro_score:+.0f}</b> — agar "{ml}" scenario aaya toh score ~{max(-100,min(100,macro_score+pred[f'score_{ml}'])):.0f} ho sakta hai.
-            </div>
-            """, unsafe_allow_html=True)
-
-        else:
-            st.info(f"{sel_event_name} ke liye historical data available nahi hai.")
-    else:
-        st.info("Event data load nahi hua.")
-
-    # ── All upcoming events quick view ──
-    st.markdown("### Sabhi Upcoming Events — Quick Probability")
-    for e in upcoming[:8]:
-        p=get_prediction(e["Indicator"],e.get("Forecast"),e.get("Previous"),macro_score)
-        if not p: continue
-        ml=p["most_likely"]
-        ml_c="#00c076" if ml=="below" else ("#ff4d4d" if ml=="above" else "#C9A227")
-        ml_lbl=f"Below {p['prob_below']}%" if ml=="below" else (f"Above {p['prob_above']}%" if ml=="above" else f"In-line {p['prob_inline']}%")
-        hrs=hours_until(e.get("Date"))
-        urgency="🔴" if hrs<24 else ("🟡" if hrs<72 else "⚪")
         st.markdown(f"""
-        <div style="display:flex;align-items:center;justify-content:space-between;
-                    padding:8px 14px;background:#111;border-radius:6px;margin-bottom:6px;
-                    border-left:3px solid {ml_c}">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span>{urgency}</span>
-            <span style="color:#C9A227;font-weight:600;font-size:0.82rem">{e['Indicator']}</span>
-            <span style="color:#333;font-size:0.7rem">{fmt_ist(e.get('Date'))}</span>
+        <div style="background:#0d0d1a;border:1px solid #1e1e3a;border-radius:12px;
+                    padding:18px 20px;margin-bottom:16px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;
+                      background:linear-gradient(90deg,#a855f7,#3a7eff,#a855f7);"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div>
+              <div style="font-size:1.1rem;font-weight:800;color:#e8e8ff;">{sel_event_name}</div>
+              <div style="color:#444;font-size:0.72rem;margin-top:2px;">{fmt_ist(sel_ev.get('Date'))}</div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;color:#C9A227;font-size:0.9rem;
+                        font-weight:700;background:#1a1200;padding:4px 12px;border-radius:4px;
+                        border:1px solid #C9A22730;">{cd_str}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:12px">
-            <span style="color:#444;font-size:0.7rem">Fc: {fp(e.get('Forecast')) if e.get('Forecast') else '—'}</span>
-            <span style="color:{ml_c};font-weight:700;font-size:0.78rem">Most likely: {ml_lbl}</span>
-            <span style="color:#555;font-size:0.7rem;font-family:'JetBrains Mono',monospace">{countdown(e.get('Date'))}</span>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;">
+            <div>
+              <div style="color:#333;font-size:0.6rem;margin-bottom:2px;">FORECAST</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#C9A227;font-size:1.1rem;font-weight:700;">{fp(fc_val) if fc_val else '—'}</div>
+            </div>
+            <div>
+              <div style="color:#333;font-size:0.6rem;margin-bottom:2px;">PREVIOUS</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:#888;font-size:1.1rem;">{fp(pv_val) if pv_val else '—'}</div>
+            </div>
+            <div>
+              <div style="color:#333;font-size:0.6rem;margin-bottom:2px;">AVG SURPRISE (24M)</div>
+              <div style="font-family:'JetBrains Mono',monospace;color:{avg_col};font-size:1.1rem;font-weight:700;">{pred['avg_surprise']:+.2f}</div>
+            </div>
+            <div>
+              <div style="color:#333;font-size:0.6rem;margin-bottom:2px;">RECENT TREND</div>
+              <div style="color:{trend_col};font-size:0.85rem;font-weight:700;text-transform:uppercase;">{pred['recent_trend']}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #1e1e3a;padding-top:10px;">
+            <div style="color:#5a5a8a;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;">
+              PROBABILITY DISTRIBUTION — Based on last {pred['history_total']} releases
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Probability bars — separate st.markdown calls ──
+        pb = pred['prob_below']
+        pi = pred['prob_inline']
+        pa = pred['prob_above']
+
+        st.markdown(f"""
+        <div style="background:#0d0d1a;border:1px solid #1e1e3a;border-radius:10px;padding:16px 20px;margin-bottom:8px;">
+
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="color:#00c076;font-size:0.78rem;font-weight:700;">
+                🟢 BELOW FORECAST &nbsp;—&nbsp; Gold Bullish
+              </span>
+              <span style="color:#00c076;font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;">{pb}%</span>
+            </div>
+            <div style="color:#333;font-size:0.65rem;margin-bottom:5px;">
+              {pred['cool_range']} &nbsp;·&nbsp; Historical: {pred['history_below']}/{pred['history_total']} times
+            </div>
+            <div style="background:#1a1a1a;border-radius:3px;height:10px;overflow:hidden;">
+              <div style="width:{pb}%;height:100%;background:#00c076;border-radius:3px;"></div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="color:#C9A227;font-size:0.78rem;font-weight:700;">
+                🟡 IN-LINE &nbsp;—&nbsp; Neutral
+              </span>
+              <span style="color:#C9A227;font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;">{pi}%</span>
+            </div>
+            <div style="color:#333;font-size:0.65rem;margin-bottom:5px;">{pred['inln_range']}</div>
+            <div style="background:#1a1a1a;border-radius:3px;height:10px;overflow:hidden;">
+              <div style="width:{pi}%;height:100%;background:#C9A227;border-radius:3px;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="color:#ff4d4d;font-size:0.78rem;font-weight:700;">
+                🔴 ABOVE FORECAST &nbsp;—&nbsp; Gold Bearish
+              </span>
+              <span style="color:#ff4d4d;font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;">{pa}%</span>
+            </div>
+            <div style="color:#333;font-size:0.65rem;margin-bottom:5px;">
+              {pred['hot_range']} &nbsp;·&nbsp; Historical: {pred['history_above']}/{pred['history_total']} times
+            </div>
+            <div style="background:#1a1a1a;border-radius:3px;height:10px;overflow:hidden;">
+              <div style="width:{pa}%;height:100%;background:#ff4d4d;border-radius:3px;"></div>
+            </div>
+          </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Analyst note
+        st.markdown(f"""
+        <div style="background:#0a0a1a;border:1px solid #1e1e3a;border-radius:8px;
+                    padding:10px 14px;margin-bottom:16px;">
+          <div style="color:#5a5a8a;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;">ANALYST NOTE</div>
+          <div style="color:#888;font-size:0.78rem;margin-top:4px;">{pred['notes']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── 3 Scenario cards ──
+        st.markdown("### 3 Scenarios — Agar Data Aaya Toh...")
+
+        a_cool = scenario_assets("below",  sel_event_name)
+        a_inln = scenario_assets("inline", sel_event_name)
+        a_hot  = scenario_assets("above",  sel_event_name)
+
+        ml = pred["most_likely"]
+
+        def make_scenario(label, emoji, color, bg, assets, prob, gold_pct, score_delta, rng, is_most_likely):
+            ml_badge = f'<span style="background:{color}20;color:{color};font-size:0.55rem;padding:2px 6px;border-radius:2px;font-weight:700;margin-left:6px;">MOST LIKELY</span>' if is_most_likely else ""
+            rows = ""
+            for aname, aval in assets.items():
+                if "↑" in aval and "BEAR" not in aval:
+                    acol = "#00c076"
+                elif "↓" in aval or "BEAR" in aval or "RISING" in aval:
+                    acol = "#ff4d4d"
+                else:
+                    acol = "#555"
+                rows += f'<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #111;font-size:0.7rem;"><span style="color:#444;">{aname}</span><span style="color:{acol};font-weight:700;font-family:\'JetBrains Mono\',monospace;">{aval}</span></div>'
+            new_score = max(-100, min(100, macro_score + score_delta))
+            sd_col = "#00c076" if score_delta > 0 else ("#ff4d4d" if score_delta < 0 else "#555")
+            return f"""
+            <div style="background:{bg};border:1px solid {color}30;border-radius:8px;padding:14px;">
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{color};margin-bottom:4px;">
+                {emoji} {label}{ml_badge}
+              </div>
+              <div style="color:#444;font-size:0.68rem;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">{rng}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="color:{color};font-size:0.85rem;font-weight:800;">Gold: {gold_pct:+.2f}%</span>
+                <span style="color:#444;font-size:0.7rem;">{prob}% chance</span>
+              </div>
+              {rows}
+              <div style="margin-top:8px;padding-top:6px;border-top:1px solid #111;font-size:0.68rem;">
+                <span style="color:#333;">Score impact: </span>
+                <span style="color:{sd_col};font-family:'JetBrains Mono',monospace;font-weight:700;">{score_delta:+.1f} → {new_score:.0f}</span>
+              </div>
+            </div>"""
+
+        sc1, sc2, sc3 = st.columns(3)
+
+        with sc1:
+            st.markdown(make_scenario(
+                "BELOW FORECAST", "🟢", "#00c076", "#001810",
+                a_cool, pb, pred['gold_below'], pred['score_below'],
+                pred['cool_range'], ml == "below"
+            ), unsafe_allow_html=True)
+
+        with sc2:
+            st.markdown(make_scenario(
+                "IN-LINE", "🟡", "#C9A227", "#1a1200",
+                a_inln, pi, pred['gold_inline'], pred['score_inline'],
+                pred['inln_range'], ml == "inline"
+            ), unsafe_allow_html=True)
+
+        with sc3:
+            st.markdown(make_scenario(
+                "ABOVE FORECAST", "🔴", "#ff4d4d", "#1a0000",
+                a_hot, pa, pred['gold_above'], pred['score_above'],
+                pred['hot_range'], ml == "above"
+            ), unsafe_allow_html=True)
+
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+        # ── Historical stats ──
+        st.markdown("### Historical Stats — Last 24 Months")
+        gr = GOLD_REACTIONS.get(sel_event_name, {})
+        hs1, hs2, hs3, hs4 = st.columns(4)
+
+        def stat_box(num, label, color="#e8e8e8"):
+            st.markdown(f"""
+            <div style="background:#0f0f0f;border:1px solid #1a1a1a;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:800;color:{color};">{num}</div>
+              <div style="font-size:0.62rem;color:#444;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;">{label}</div>
+            </div>""", unsafe_allow_html=True)
+
+        with hs1: stat_box(f"{pred['history_below']}/{pred['history_total']}", "Below forecast", "#00c076")
+        with hs2: stat_box(f"{pred['history_above']}/{pred['history_total']}", "Above forecast", "#ff4d4d")
+        with hs3: stat_box(f"{gr.get('below',0):+.2f}%", "Gold avg (cool)", "#00c076")
+        with hs4: stat_box(f"{gr.get('above',0):+.2f}%", "Gold avg (hot)", "#ff4d4d")
+
+        new_s_ml = max(-100, min(100, macro_score + pred[f'score_{ml}']))
+        st.markdown(f"""
+        <div style="background:#1a1200;border-left:3px solid #C9A227;border-radius:0 6px 6px 0;
+                    padding:10px 14px;font-size:0.78rem;color:#9a7a20;margin-top:12px;">
+          ⚠️ Probability estimate historical patterns par based hai — guarantee nahi.
+          Market reaction positioning, revisions, aur cross-asset confirmation par depend karta hai.
+          Release ke baad hamesha DXY + US2Y reaction dekho before entering any trade.<br><br>
+          Current score <strong>{macro_score:+.0f}</strong> — agar <strong>{ml}</strong> scenario aaya
+          toh score ~<strong>{new_s_ml:.0f}</strong> ho sakta hai.
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+        st.info(f"{sel_event_name} ke liye historical data available nahi hai.")
+
           </div>
         </div>
         """, unsafe_allow_html=True)
